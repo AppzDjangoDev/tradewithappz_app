@@ -43,10 +43,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _retrieveCSRFToken() async {
-    final url = 'https://e7aa-2401-4900-6472-7006-1c41-f227-56c0-af25.ngrok-free.app/api/get-csrf-token/';
+    final url = 'https://65c7-2401-4900-6472-7006-dd5-104c-63b9-fed2.ngrok-free.app/api/csrf-token/'; // Replace with your actual CSRF endpoint
     try {
       final response = await http.get(Uri.parse(url));
-
       if (response.statusCode == 200) {
         final cookies = response.headers['set-cookie'];
         setState(() {
@@ -72,36 +71,72 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _logout() async {
     try {
-      final url = 'https://e7aa-2401-4900-6472-7006-1c41-f227-56c0-af25.ngrok-free.app/api/logout/';
+      final url = 'https://65c7-2401-4900-6472-7006-dd5-104c-63b9-fed2.ngrok-free.app/api/logout/';
       final response = await http.post(
         Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': _csrfToken,
+          'X-CSRFToken': _csrfToken, // Include the CSRF token
           'Accept': 'application/json',
-        },
-      );
+          },
+        );
 
-      if (response.statusCode == 200) {
-        Navigator.pushReplacementNamed(context, '/login');
-        var box = await Hive.openBox('app_log');
-        await box.clear();
-      } else {
-        print('Logout failed. Response status: ${response.statusCode}');
-        print('Response body: ${response.body}');
+        if (response.statusCode == 200) {
+          // Handle successful logout
+          Navigator.pushReplacementNamed(context, '/login');
+          var box = await Hive.openBox('app_log');
+          await box.clear();
+        } else {
+          // Handle logout failure
+          print('Logout failed. Response status: ${response.statusCode}');
+          print('Response body: ${response.body}');
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Logout failed. Please try again.')),
+          );
+        }
+      } catch (e) {
+        // Handle exception during logout
+        print('Logout failed with exception: $e');
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Logout failed. Please try again.')),
+          SnackBar(content: Text('An error occurred during logout. Please try again.')),
         );
       }
-    } catch (e) {
-      print('Logout failed with exception: $e');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An error occurred during logout. Please try again.')),
-      );
     }
-  }
+
+  // Future<void> _logout() async {
+  //   try {
+  //     final url = 'https://65c7-2401-4900-6472-7006-dd5-104c-63b9-fed2.ngrok-free.app/api/logout/';
+  //     final response = await http.post(
+  //       Uri.parse(url),
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         'X-CSRFToken': _csrfToken,
+  //         'Accept': 'application/json',
+  //       },
+  //     );
+
+  //     if (response.statusCode == 200) {
+  //       Navigator.pushReplacementNamed(context, '/login');
+  //       var box = await Hive.openBox('app_log');
+  //       await box.clear();
+  //     } else {
+  //       print('Logout failed. Response status: ${response.statusCode}');
+  //       print('Response body: ${response.body}');
+
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('Logout failed. Please try again.')),
+  //       );
+  //     }
+  //   } catch (e) {
+  //     print('Logout failed with exception: $e');
+
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('An error occurred during logout. Please try again.')),
+  //     );
+  //   }
+  // }
 
   void _onItemTapped(int index) {
     setState(() {
