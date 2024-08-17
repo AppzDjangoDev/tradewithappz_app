@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert'; // For jsonEncode
-import 'package:provider/provider.dart';
-import '../theme_notifier.dart'; // Adjust path if needed
-import 'home_page.dart'; // Ensure the home_page.dart path is correct
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
@@ -27,7 +24,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _retrieveCsrfToken() async {
-    final url = 'https://65c7-2401-4900-6472-7006-dd5-104c-63b9-fed2.ngrok-free.app/api/csrf-token/'; // Replace with your actual CSRF endpoint
+    final url = 'https://spacewear.onrender.com/api/csrf-token/'; // Replace with your actual CSRF endpoint
     try {
       final response = await http.get(Uri.parse(url));
 
@@ -54,7 +51,7 @@ class _LoginPageState extends State<LoginPage> {
         _isLoading = true; // Show loading animation
       });
 
-      final url = 'https://65c7-2401-4900-6472-7006-dd5-104c-63b9-fed2.ngrok-free.app/api/login/';
+      final url = 'https://spacewear.onrender.com/api/login/';
       try {
         final response = await http.post(
           Uri.parse(url),
@@ -115,7 +112,7 @@ class _LoginPageState extends State<LoginPage> {
           // Background image
           Positioned.fill(
             child: Image.network(
-              'https://images.unsplash.com/photo-1698847102523-cb8643d755a4?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxleHBsb3JlLWZlZWR8MTl8fHxlbnwwfHx8fHw%3D',
+              'https://images.unsplash.com/photo-1618123069754-cd64c230a169?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YmxhY2slMjB0ZXh0dXJlfGVufDB8fDB8fHww',
               fit: BoxFit.cover,
             ),
           ),
@@ -148,17 +145,17 @@ class _LoginPageState extends State<LoginPage> {
                           labelText: 'Username',
                           labelStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
-                          fillColor: Colors.grey[800],
+                          fillColor: Colors.transparent,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(15),
                             borderSide: BorderSide.none,
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.blue, width: 2),
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide(color: Colors.transparent, width: 2),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(15),
                             borderSide: BorderSide(color: Colors.grey[700]!, width: 1),
                           ),
                         ),
@@ -173,17 +170,17 @@ class _LoginPageState extends State<LoginPage> {
                           labelText: 'Password',
                           labelStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
-                          fillColor: Colors.grey[800],
+                          fillColor: Colors.transparent,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(15),
                             borderSide: BorderSide.none,
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.blue, width: 2),
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide(color: Colors.transparent, width: 2),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(15),
                             borderSide: BorderSide(color: Colors.grey[700]!, width: 1),
                           ),
                         ),
@@ -196,7 +193,7 @@ class _LoginPageState extends State<LoginPage> {
                       ElevatedButton(
                         onPressed: _login,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue, // Background color of button
+                          backgroundColor: Color.fromARGB(147, 89, 89, 89)!, // Background color of button
                           foregroundColor: Colors.white, // Text color
                           minimumSize: Size(double.infinity, 50), // Full width and height
                           shape: RoundedRectangleBorder(

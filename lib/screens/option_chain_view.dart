@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart'; // For debugging purposes
 import 'package:slide_action/slide_action.dart';
 import 'package:slider_button/slider_button.dart';
 
-
 class OptionChainView extends StatelessWidget {
   const OptionChainView({
     super.key,
@@ -22,20 +21,36 @@ class OptionChainView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        CarouselExample(
-          cardInfos: cardInfos,
-          height: carouselHeight,
-        ),
-        SizedBox(height: 10), // Adjust height as needed
-        Expanded(
-          child: SpacedItemsList(
-            listTileHeight: listTileHeight,
-            carouselWidth: carouselWidth,
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Background image
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: NetworkImage('https://images.unsplash.com/photo-1618123069754-cd64c230a169?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YmxhY2slMjB0ZXh0dXJlfGVufDB8fDB8fHww'),
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
-        ),
-      ],
+          // Foreground content
+          Column(
+            children: <Widget>[
+              CarouselExample(
+                cardInfos: cardInfos,
+                height: carouselHeight,
+              ),
+              SizedBox(height: 10), // Adjust height as needed
+              Expanded(
+                child: SpacedItemsList(
+                  listTileHeight: listTileHeight,
+                  carouselWidth: carouselWidth,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -85,7 +100,7 @@ class HeroLayoutCard extends StatelessWidget {
     final double width = MediaQuery.of(context).size.width;
     return Container(
       width: width * 0.95,
-      color: Colors.blue,
+      color: Color.fromARGB(243, 9, 9, 9), // Define the color for consistency
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -99,7 +114,7 @@ class HeroLayoutCard extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
-                  ?.copyWith(color: const Color.fromARGB(255, 73, 75, 76)),
+                  ?.copyWith(color: Colors.white),
             ),
             const SizedBox(height: 3),
             Text(
@@ -109,7 +124,7 @@ class HeroLayoutCard extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(color: const Color.fromARGB(255, 15, 174, 71)),
+                  ?.copyWith(color: Colors.white),
             ),
           ],
         ),
@@ -138,7 +153,7 @@ class SpacedItemsList extends StatelessWidget {
           items,
           (index) => Container(
             width: carouselWidth,
-            margin: const EdgeInsets.symmetric(vertical: 0.2),
+            margin: const EdgeInsets.symmetric(vertical: 0.1),
             child: ItemWidget(
               text: 'Strike ${index + 1}',
               height: listTileHeight,
@@ -177,7 +192,7 @@ class ItemWidget extends StatelessWidget {
       }
     }
 
-    final double buttonHeight = height * 1.0; // Adjust fraction as needed
+    final double buttonHeight = height * 0.8; // Adjust fraction as needed
     final double buttonWidth = 130; // Adjust width for buttons
 
     return Container(
@@ -186,6 +201,8 @@ class ItemWidget extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
+        color: Color.fromARGB(243, 9, 9, 9), // Define the color for consistency
+        elevation: 0, // Remove shadow
         child: SizedBox(
           height: height,
           child: Row(
@@ -196,7 +213,7 @@ class ItemWidget extends StatelessWidget {
                 height: buttonHeight,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: Colors.green.withOpacity(0.9), // Semi-transparent green
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -223,7 +240,7 @@ class ItemWidget extends StatelessWidget {
                     margin: const EdgeInsets.symmetric(horizontal: 3),
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.blue,
+                      color: Colors.blue.withOpacity(0.9), // Semi-transparent blue
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -238,7 +255,7 @@ class ItemWidget extends StatelessWidget {
                 height: buttonHeight,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                    backgroundColor: Colors.red.withOpacity(0.9), // Semi-transparent red
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

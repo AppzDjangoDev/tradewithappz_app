@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import '../models/app_log.dart'; // Import the AppLog model
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:crypto/crypto.dart'; // Add this import for SHA-256
 
 class WidgetHome extends StatelessWidget {
   const WidgetHome({super.key});
@@ -13,15 +15,15 @@ class WidgetHome extends StatelessWidget {
     final double appBarHeight = Scaffold.of(context).appBarMaxHeight ?? kToolbarHeight;
     final double availableHeight = screenHeight - appBarHeight;
 
-    final double carouselHeight = availableHeight * 0.178; // 20% of available height for carousel
-    final double cardHeight = (availableHeight - carouselHeight) / 5; // Remaining height divided by 4 rows
+    final double carouselHeight = availableHeight * 0.178;
+    final double cardHeight = (availableHeight - carouselHeight) / 6; // Adjusted to increase space between cards
 
-    // Calculate card width to match the carousel width
-    final double cardWidth = screenWidth * 0.45; // 45% of the screen width for cards
+    final double cardWidth = screenWidth * 0.25; // Reduced width to make cards smaller
 
-    // Build carousel items with latest date
-    return FutureBuilder<String>(
-      future: fetchLatestDate(), // Fetch the latest date
+    final Color cardColor = Color.fromARGB(243, 9, 9, 9); // Define the color for consistency
+
+    return FutureBuilder<Map<String, dynamic>>(
+      future: fetchProfileData(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
@@ -29,55 +31,66 @@ class WidgetHome extends StatelessWidget {
           );
         } else if (snapshot.hasError) {
           return Scaffold(
-            body: Center(child: Text('Error fetching date')),
+            body: Center(child: Text('Error fetching profile data')),
           );
         }
 
-        final latestDate = snapshot.data ?? 'No Data';
-
+        final profileData = snapshot.data;
         final List<Widget> carouselItems = [
-          _buildCarouselItem(latestDate, Colors.blue),
-          _buildCarouselItem('Overview 2', Colors.green),
-          _buildCarouselItem('Overview 3', Colors.orange),
+          _buildCarouselItem('Name: ${profileData?['name'] ?? 'N/A'}', cardColor),
+          _buildCarouselItem('Email: ${profileData?['email_id'] ?? 'N/A'}', cardColor),
+          _buildCarouselItem('PAN: ${profileData?['PAN'] ?? 'N/A'}', cardColor),
         ];
 
         return Scaffold(
-          body: Column(
+          body: Stack(
             children: [
-              // Carousel Slider
+              // Background image
               Container(
-                height: carouselHeight,
-                child: CarouselSlider(
-                  options: CarouselOptions(
-                    height: carouselHeight,
-                    viewportFraction: 0.95,
-                    enlargeCenterPage: true,
-                    autoPlay: false, // Disable automatic scrolling
-                    enableInfiniteScroll: false, // Optional: Disable infinite scroll
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage('https://images.unsplash.com/photo-1618123069754-cd64c230a169?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YmxhY2slMjB0ZXh0dXJlfGVufDB8fDB8fHww'),
+                    fit: BoxFit.cover,
                   ),
-                  items: carouselItems,
                 ),
               ),
-              const SizedBox(height: 5),
-              // GridView of Dashboard Cards
-              Expanded(
-                child: GridView.builder(
-                  padding: const EdgeInsets.all(10.0),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 10.0,
-                    mainAxisSpacing: 10.0,
-                    childAspectRatio: cardWidth / cardHeight, // Adjust aspect ratio based on card dimensions
+              // Foreground content
+              Column(
+                children: [
+                  Container(
+                    height: carouselHeight,
+                    child: CarouselSlider(
+                      options: CarouselOptions(
+                        height: carouselHeight,
+                        viewportFraction: 0.95,
+                        enlargeCenterPage: true,
+                        autoPlay: false,
+                        enableInfiniteScroll: false,
+                      ),
+                      items: carouselItems,
+                    ),
                   ),
-                  itemCount: 8, // Updated to reflect 8 cards
-                  itemBuilder: (BuildContext context, int index) {
-                    return SizedBox(
-                      width: cardWidth, // Set the width of the card
-                      height: cardHeight,
-                      child: DashboardCard(index: index),
-                    );
-                  },
-                ),
+                  const SizedBox(height: 10), // Increased space between carousel and grid
+                  Expanded(
+                    child: GridView.builder(
+                      padding: const EdgeInsets.all(12.0), // Increased padding
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3, // Changed to 3 columns
+                        crossAxisSpacing: 15.0, // Increased spacing between cards
+                        mainAxisSpacing: 15.0, // Increased spacing between rows
+                        childAspectRatio: cardWidth / cardHeight,
+                      ),
+                      itemCount: 12,
+                      itemBuilder: (BuildContext context, int index) {
+                        return SizedBox(
+                          width: cardWidth,
+                          height: cardHeight,
+                          child: DashboardCard(index: index, cardColor: cardColor),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -89,7 +102,7 @@ class WidgetHome extends StatelessWidget {
   Widget _buildCarouselItem(String title, Color color) {
     return Container(
       decoration: BoxDecoration(
-        color: color,
+        color: color, // Use the same color for the carousel items
         borderRadius: BorderRadius.circular(20),
       ),
       child: Center(
@@ -105,70 +118,80 @@ class WidgetHome extends StatelessWidget {
     );
   }
 
-  Future<String> fetchLatestDate() async {
-    final box = await Hive.openBox<AppLog>('app_log_box');
-    final latestEntry = box.values.toList()
-      ..sort((a, b) => b.date.compareTo(a.date)); // Sort by date in descending order
-    if (latestEntry.isNotEmpty) {
-      final latestDate = latestEntry.first.date;
-      return '${latestDate.year}-${latestDate.month.toString().padLeft(2, '0')}-${latestDate.day.toString().padLeft(2, '0')}';
+  Future<void> refreshAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final appId = prefs.getString('client_id');
+    final secretKey = prefs.getString('secret_key');
+    final accessToken = prefs.getString('access_token');
+    final pin = '2255'; // Replace with the actual pin
+
+    if (appId == null || accessToken == null || secretKey == null) {
+      throw Exception('Missing app_id, access_token, or secret_key');
     }
-    return 'No Data'; // Return a placeholder if no data is found
+
+    final appIdHash = sha256.convert(utf8.encode('$appId:$secretKey')).toString();
+
+    final url = Uri.parse('https://api-t1.fyers.in/api/v3/validate-refresh-token');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'grant_type': 'refresh_token',
+        'appIdHash': appIdHash,
+        'refresh_token': accessToken,
+        'pin': pin,
+      }),
+    );
+
+    // Print the incoming response as a string
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final newAccessToken = data['access_token'];
+      prefs.setString('access_token', newAccessToken);
+    } else {
+      throw Exception('Failed to refresh access token');
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchProfileData() async {
+    await refreshAccessToken(); // Refresh the access token before fetching profile data
+
+    final prefs = await SharedPreferences.getInstance();
+    final appId = prefs.getString('client_id');
+    final accessToken = prefs.getString('access_token');
+
+    if (appId == null || accessToken == null) {
+      throw Exception('Missing app_id or access_token');
+    }
+
+    final url = Uri.parse('https://api-t1.fyers.in/api/v3/funds');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': '$appId:$accessToken',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      return data['data'] ?? {};
+    } else {
+      throw Exception('Failed to fetch profile data');
+    }
   }
 }
 
 class DashboardCard extends StatelessWidget {
-  const DashboardCard({super.key, required this.index});
+  const DashboardCard({super.key, required this.index, required this.cardColor});
 
   final int index;
+  final Color cardColor;
 
   @override
   Widget build(BuildContext context) {
-    // Gradient colors for the cards
-    final gradients = [
-      LinearGradient(
-        colors: [Colors.blue.shade700, Colors.blue.shade300],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      LinearGradient(
-        colors: [Colors.green.shade700, Colors.green.shade300],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      LinearGradient(
-        colors: [Colors.orange.shade700, Colors.orange.shade300],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      LinearGradient(
-        colors: [Colors.red.shade700, Colors.red.shade300],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      LinearGradient(
-        colors: [Colors.purple.shade700, Colors.purple.shade300],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      LinearGradient(
-        colors: [Colors.teal.shade700, Colors.teal.shade300],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      // Adding two new gradients
-      LinearGradient(
-        colors: [Colors.cyan.shade700, Colors.cyan.shade300],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      LinearGradient(
-        colors: [Colors.indigo.shade700, Colors.indigo.shade300],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-    ];
-
     final titles = [
       'Profit Status',
       'Loss Status',
@@ -178,6 +201,10 @@ class DashboardCard extends StatelessWidget {
       'Savings',
       'Growth',
       'Targets',
+      'Projects',
+      'Goals',
+      'Achievements',
+      'Insights',
     ];
 
     return Card(
@@ -185,9 +212,10 @@ class DashboardCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
       ),
+      color: Colors.transparent, // Set the card color to transparent
       child: Container(
         decoration: BoxDecoration(
-          gradient: gradients[index],
+          color: cardColor, // Use the same color for the cards
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
@@ -198,20 +226,20 @@ class DashboardCard extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(5.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Icon(
                 Icons.bar_chart,
-                size: 50,
+                size: 30,
                 color: Colors.white,
               ),
               const SizedBox(height: 10),
               Text(
                 titles[index],
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 14,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -220,7 +248,7 @@ class DashboardCard extends StatelessWidget {
               Text(
                 'Details here',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 10,
                   color: Colors.white70,
                 ),
               ),

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart'; // Import google_fonts
-import 'package:hive_flutter/hive_flutter.dart'; // Import hive_flutter for Hive
-import 'models/app_log.dart'; // Import your AppLog model
-import 'models/trading_configuration.dart'; // Import your TradingConfiguration model
-import 'theme_notifier.dart'; // Import your ThemeNotifier class
-import 'screens/home_page.dart'; // Import your HomePage
-import 'screens/login_page.dart'; // Import your LoginPage
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'models/app_log.dart';
+import 'models/trading_configuration.dart';
+import 'theme_notifier.dart';
+import 'screens/home_page.dart';
+import 'screens/login_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,15 +23,23 @@ void main() async {
   await Hive.openBox<AppLog>('app_log_box');
   await Hive.openBox<TradingConfiguration>('trading_configuration_box');
 
+  // Check login status
+  final prefs = await SharedPreferences.getInstance();
+  final bool isLoggedIn = prefs.getString('access_token') != null;
+
   runApp(
     ChangeNotifierProvider(
-      create: (_) => ThemeNotifier(), // Initialize ThemeNotifier
-      child: MyApp(),
+      create: (_) => ThemeNotifier(),
+      child: MyApp(isLoggedIn: isLoggedIn),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
+  final bool isLoggedIn;
+
+  const MyApp({super.key, required this.isLoggedIn});
+
   @override
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
@@ -44,11 +53,39 @@ class MyApp extends StatelessWidget {
       theme: ThemeData.light().copyWith(
         textTheme: GoogleFonts.robotoTextTheme(ThemeData.light().textTheme),
       ),
-      initialRoute: '/login', // Set the initial route to the login page
+      initialRoute: isLoggedIn ? '/home' : '/login',
       routes: {
-        '/login': (context) => const LoginPage(), // Define the login page route
-        '/home': (context) => const HomePage(), // Define the home page route
+        '/login': (context) => const BackgroundContainer(child: LoginPage()),
+        '/home': (context) => const BackgroundContainer(child: HomePage()),
       },
+    );
+  }
+}
+
+class BackgroundContainer extends StatelessWidget {
+  final Widget child;
+
+  const BackgroundContainer({Key? key, required this.child}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: NetworkImage(
+                  'https://images.unsplash.com/photo-1618123069754-cd64c230a169?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YmxhY2slMjB0ZXh0dXJlfGVufDB8fDB8fHww',
+                ),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          child,
+        ],
+      ),
     );
   }
 }

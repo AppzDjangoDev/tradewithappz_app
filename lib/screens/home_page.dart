@@ -5,6 +5,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../theme_notifier.dart';
 import 'option_chain_view.dart';
 import 'widgethome.dart';
+import 'profile.dart'; 
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,12 +22,12 @@ class _HomePageState extends State<HomePage> {
   String _csrfToken = ''; // Store the CSRF token
 
   static const List<String> _titles = [
-    'DASHBOARD',
-    'MIDCPNIFTY',
-    'FINNIFTY',
-    'BANKNIFTY',
-    'NIFTY',
-    'CONTROLS',
+    'Dashboard',
+    'Midcap Nifty',
+    'Finnifty',
+    'Banknifty',
+    'Nifty',
+    'Controls',
   ];
 
   static const List<List<CardInfo>> _cardInfos = [
@@ -43,7 +46,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _retrieveCSRFToken() async {
-    final url = 'https://65c7-2401-4900-6472-7006-dd5-104c-63b9-fed2.ngrok-free.app/api/csrf-token/'; // Replace with your actual CSRF endpoint
+    final url = 'https://spacewear.onrender.com/api/csrf-token/'; // Replace with your actual CSRF endpoint
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
@@ -71,72 +74,41 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _logout() async {
     try {
-      final url = 'https://65c7-2401-4900-6472-7006-dd5-104c-63b9-fed2.ngrok-free.app/api/logout/';
+      final url = 'https://spacewear.onrender.com/api/logout/';
       final response = await http.post(
         Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
           'X-CSRFToken': _csrfToken, // Include the CSRF token
           'Accept': 'application/json',
-          },
-        );
+        },
+      );
 
-        if (response.statusCode == 200) {
-          // Handle successful logout
-          Navigator.pushReplacementNamed(context, '/login');
-          var box = await Hive.openBox('app_log');
-          await box.clear();
-        } else {
-          // Handle logout failure
-          print('Logout failed. Response status: ${response.statusCode}');
-          print('Response body: ${response.body}');
+      if (response.statusCode == 200) {
+        // Clear Hive box
+        final appLogBox = await Hive.openBox('app_log');
+        await appLogBox.clear();
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Logout failed. Please try again.')),
-          );
-        }
-      } catch (e) {
-        // Handle exception during logout
-        print('Logout failed with exception: $e');
+        // Clear shared preferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.clear();
 
+        // Navigate to login page
+        Navigator.pushReplacementNamed(context, '/login');
+      } else {
+        print('Logout failed. Response status: ${response.statusCode}');
+        print('Response body: ${response.body}');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('An error occurred during logout. Please try again.')),
+          SnackBar(content: Text('Logout failed. Please try again.')),
         );
       }
+    } catch (e) {
+      print('Logout failed with exception: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred during logout. Please try again.')),
+      );
     }
-
-  // Future<void> _logout() async {
-  //   try {
-  //     final url = 'https://65c7-2401-4900-6472-7006-dd5-104c-63b9-fed2.ngrok-free.app/api/logout/';
-  //     final response = await http.post(
-  //       Uri.parse(url),
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         'X-CSRFToken': _csrfToken,
-  //         'Accept': 'application/json',
-  //       },
-  //     );
-
-  //     if (response.statusCode == 200) {
-  //       Navigator.pushReplacementNamed(context, '/login');
-  //       var box = await Hive.openBox('app_log');
-  //       await box.clear();
-  //     } else {
-  //       print('Logout failed. Response status: ${response.statusCode}');
-  //       print('Response body: ${response.body}');
-
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Logout failed. Please try again.')),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     print('Logout failed with exception: $e');
-
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('An error occurred during logout. Please try again.')),
-  //     );
-  //   }
-  // }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -150,35 +122,49 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       key: _scaffoldKey,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {
-            _scaffoldKey.currentState?.openDrawer();
-          },
-        ),
-        title: Text(_titles[_selectedIndex]),
-        actions: <Widget>[
-          IconButton(
-            icon: Icon(
-              themeNotifier.themeMode == ThemeMode.dark
-                  ? Icons.nightlight_round
-                  : Icons.wb_sunny,
-            ),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.menu),
             onPressed: () {
-              themeNotifier.setThemeMode(
-                themeNotifier.themeMode == ThemeMode.dark
-                    ? ThemeMode.light
-                    : ThemeMode.dark,
-              );
+              _scaffoldKey.currentState?.openDrawer();
             },
           ),
-          Padding(
-            padding: const EdgeInsetsDirectional.only(end: 25.0),
-            child: CircleAvatar(child: Icon(Icons.account_circle)),
-          ),
-        ],
-      ),
+          title: Text(_titles[_selectedIndex]),
+          actions: <Widget>[
+            IconButton(
+              icon: Icon(
+                themeNotifier.themeMode == ThemeMode.dark
+                    ? Icons.nightlight_round
+                    : Icons.wb_sunny,
+              ),
+              onPressed: () {
+                themeNotifier.setThemeMode(
+                  themeNotifier.themeMode == ThemeMode.dark
+                      ? ThemeMode.light
+                      : ThemeMode.dark,
+                );
+              },
+            ),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(end: 25.0),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const ProfilePage()),
+                  );
+                },
+                child: CircleAvatar(
+                  child: Icon(Icons.account_circle),
+                ),
+              ),
+            ),
+          ],
+          backgroundColor: Colors.transparent, // Makes the background transparent
+          elevation: 0, // Removes the shadow
+          iconTheme: IconThemeData(color: Colors.white), // Adjust the icon color if needed
+          titleTextStyle: TextStyle(color: Colors.white), // Adjust the title color if needed
+        ),
+
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
