@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart'; // Import the spinkit package
 import '../theme_notifier.dart';
 import 'option_chain_view.dart';
 import 'widgethome.dart';
-import 'profile.dart'; 
+import 'profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,6 +21,7 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String _csrfToken = ''; // Store the CSRF token
+  bool _isLoading = true; // State to track loading
 
   static const List<String> _titles = [
     'Dashboard',
@@ -53,6 +55,7 @@ class _HomePageState extends State<HomePage> {
         final cookies = response.headers['set-cookie'];
         setState(() {
           _csrfToken = _extractCSRFToken(cookies);
+          _isLoading = false; // Set loading to false when done
         });
         print('CSRF Token retrieved successfully: $_csrfToken');
       } else {
@@ -122,158 +125,232 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       key: _scaffoldKey,
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () {
-              _scaffoldKey.currentState?.openDrawer();
-            },
+      drawer: Drawer(
+        backgroundColor: Colors.transparent, // Set the drawer background to transparent
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.95), // Add a semi-transparent background to the entire drawer
           ),
-          title: Text(_titles[_selectedIndex]),
-          actions: <Widget>[
-            IconButton(
-              icon: Icon(
-                themeNotifier.themeMode == ThemeMode.dark
-                    ? Icons.nightlight_round
-                    : Icons.wb_sunny,
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.95), // Apply the same semi-transparent background
+                ),
+                child: Container(
+                  alignment: Alignment.bottomLeft,
+                  child: Text(
+                    'Menu',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          color: const Color.fromARGB(255, 255, 255, 255),
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
               ),
-              onPressed: () {
-                themeNotifier.setThemeMode(
-                  themeNotifier.themeMode == ThemeMode.dark
-                      ? ThemeMode.light
-                      : ThemeMode.dark,
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsetsDirectional.only(end: 25.0),
-              child: GestureDetector(
+              ListTile(
+                leading: const Icon(Icons.nightlight_round),
+                title: const Text('Dark Mode Toggle'),
                 onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const ProfilePage()),
+                  Navigator.pop(context);
+                  themeNotifier.setThemeMode(
+                    themeNotifier.themeMode == ThemeMode.dark
+                        ? ThemeMode.light
+                        : ThemeMode.dark,
                   );
                 },
-                child: CircleAvatar(
-                  child: Icon(Icons.account_circle),
-                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.settings),
+                title: const Text('Trading Configuration'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Add your action for trading configuration here
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.developer_mode),
+                title: const Text('Developer Settings'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Add your action for developer settings here
+                },
+              ),
+              const Spacer(),
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Log Out'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _logout();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: NetworkImage('https://images.unsplash.com/photo-1618123069754-cd64c230a169?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YmxhY2slMjB0ZXh0dXJlfGVufDB8fDB8fHww'),
+                fit: BoxFit.cover,
               ),
             ),
-          ],
-          backgroundColor: Colors.transparent, // Makes the background transparent
-          elevation: 0, // Removes the shadow
-          iconTheme: IconThemeData(color: Colors.white), // Adjust the icon color if needed
-          titleTextStyle: TextStyle(color: Colors.white), // Adjust the title color if needed
-        ),
-
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-                image: DecorationImage(
-                  image: AssetImage('assets/images/menu_bg.jpg'),
-                  fit: BoxFit.cover,
-                ),
+          ),
+          if (_isLoading)
+            Center(
+              child: SpinKitFadingCircle(
+                color: Colors.white,
+                size: 50.0,
               ),
-              child: Container(
-                alignment: Alignment.bottomLeft,
+            )
+          else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final double screenHeight = constraints.maxHeight;
+                final double appBarHeight = kToolbarHeight;
+                final double buttonHeight = 40.0 + 16.0 + 16.0; // Height of FloatingActionButton area
+                final double carouselHeight = screenHeight * 0.19;
+                final double listTileHeight = (screenHeight - appBarHeight - carouselHeight - buttonHeight) / 9;
+                final double carouselWidth = constraints.maxWidth * 0.95;
+
+                return _selectedIndex == 0
+                    ? const WidgetHome()
+                    : Padding(
+                        padding: EdgeInsets.only(top: 0), // Add padding equivalent to button area height
+                        child: OptionChainView(
+                          cardInfos: _cardInfos[_selectedIndex],
+                          carouselHeight: carouselHeight,
+                          listTileHeight: listTileHeight,
+                          carouselWidth: carouselWidth,
+                        ),
+                      );
+              },
+            ),
+          Positioned(
+            top: 60,
+            left: 16,
+            child: FloatingActionButton(
+              onPressed: () {
+                _scaffoldKey.currentState?.openDrawer();
+              },
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: const Icon(Icons.menu, color: Colors.white),
+            ),
+          ),
+          Positioned(
+            top: 60,
+            right: 16,
+            child: FloatingActionButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const ProfilePage()),
+                );
+              },
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: const Icon(Icons.account_circle, color: Colors.white),
+            ),
+          ),
+          Positioned(
+            top: 60,
+            left: 80,
+            right: 80,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Center(
                 child: Text(
-                  'Menu',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: const Color.fromARGB(255, 255, 255, 255),
+                  _titles[_selectedIndex],
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
                 ),
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.nightlight_round),
-              title: const Text('Dark Mode Toggle'),
-              onTap: () {
-                Navigator.pop(context);
-                themeNotifier.setThemeMode(
-                  themeNotifier.themeMode == ThemeMode.dark
-                      ? ThemeMode.light
-                      : ThemeMode.dark,
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('Trading Configuration'),
-              onTap: () {
-                Navigator.pop(context);
-                // Add your action for trading configuration here
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.developer_mode),
-              title: const Text('Developer Settings'),
-              onTap: () {
-                Navigator.pop(context);
-                // Add your action for developer settings here
-              },
-            ),
-            const Spacer(),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Log Out'),
-              onTap: () async {
-                Navigator.pop(context);
-                await _logout();
-              },
-            ),
-          ],
-        ),
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final double screenHeight = constraints.maxHeight;
-          final double appBarHeight = kToolbarHeight;
-          final double carouselHeight = screenHeight * 0.19;
-          final double listTileHeight = (screenHeight - appBarHeight - carouselHeight) / 9;
-          final double carouselWidth = constraints.maxWidth * 0.95;
-
-          return _selectedIndex == 0
-              ? const WidgetHome()
-              : OptionChainView(
-                  cardInfos: _cardInfos[_selectedIndex],
-                  carouselHeight: carouselHeight,
-                  listTileHeight: listTileHeight,
-                  carouselWidth: carouselWidth,
-                );
-        },
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'HOME',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.business),
-            label: 'MIDCPNIFTY',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.attach_money),
-            label: 'FINNIFTY',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance),
-            label: 'BANKNIFTY',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.show_chart),
-            label: 'NIFTY',
           ),
         ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
       ),
+
+bottomNavigationBar: Container(
+  height: kBottomNavigationBarHeight + 15, // Increase the height by 3 pixels
+  color: Colors.black, // Set the background color to black
+  child: SalomonBottomBar(
+    currentIndex: _selectedIndex,
+    onTap: _onItemTapped,
+    items: [
+      SalomonBottomBarItem(
+        icon: SizedBox(
+          width: 30,
+          height: 45,
+          child: const Icon(Icons.home),
+        ),
+        title: const Text('Dashboard'),
+        selectedColor: Colors.white,
+        unselectedColor: Colors.grey[800],
+      ),
+      SalomonBottomBarItem(
+        icon: SizedBox(
+          width: 30,
+          height: 45,
+          child: const Icon(Icons.trending_up),
+        ),
+        title: const Text('Midcap Nifty'),
+        selectedColor: Colors.white,
+        unselectedColor: Colors.grey[800],
+      ),
+      SalomonBottomBarItem(
+        icon: SizedBox(
+          width: 30,
+          height: 45,
+          child: const Icon(Icons.pie_chart),
+        ),
+        title: const Text('Finnifty'),
+        selectedColor: Colors.white,
+        unselectedColor: Colors.grey[800],
+      ),
+      SalomonBottomBarItem(
+        icon: SizedBox(
+          width: 30,
+          height: 45,
+          child: const Icon(Icons.attach_money),
+        ),
+        title: const Text('Banknifty'),
+        selectedColor: Colors.white,
+        unselectedColor: Colors.grey[800],
+      ),
+      SalomonBottomBarItem(
+        icon: SizedBox(
+          width: 30,
+          height: 45,
+          child: const Icon(Icons.bar_chart),
+        ),
+        title: const Text('Nifty'),
+        selectedColor: Colors.white,
+        unselectedColor: Colors.grey[800],
+      ),
+      SalomonBottomBarItem(
+        icon: SizedBox(
+          width: 30,
+          height: 45,
+          child: const Icon(Icons.control_camera),
+        ),
+        title: const Text('Controls'),
+        selectedColor: Colors.white,
+        unselectedColor: Colors.grey[800],
+      ),
+    ],
+  ),
+),
+
     );
   }
 }

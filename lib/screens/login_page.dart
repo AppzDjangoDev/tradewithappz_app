@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert'; // For jsonEncode
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart'; // Import the spinkit package
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -81,6 +82,7 @@ class _LoginPageState extends State<LoginPage> {
           await prefs.setString('secret_key', data['secret_key']);
           await prefs.setString('timestamp', data['timestamp']);
           await prefs.setString('date', data['date']);
+          await prefs.setString('auth_code_url', data['auth_code_url']); // Store auth_code_url in session
 
           // Navigate to HomePage
           Navigator.of(context).pushReplacementNamed('/home');
@@ -102,6 +104,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -139,73 +142,85 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 40),
-                      TextFormField(
-                        controller: _usernameController,
-                        decoration: InputDecoration(
-                          labelText: 'Username',
-                          labelStyle: TextStyle(color: Colors.grey[400]),
-                          filled: true,
-                          fillColor: Colors.transparent,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide.none,
+                      Container(
+                        width: MediaQuery.of(context).size.width * 0.87, // Reduce width to 80% of screen width
+                        child: TextFormField(
+                          controller: _usernameController,
+                          decoration: InputDecoration(
+                            labelText: 'Username',
+                            labelStyle: TextStyle(color: Colors.grey[400]),
+                            filled: true,
+                            fillColor: Colors.transparent,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide(color: const Color.fromARGB(255, 28, 26, 26)!, width: 2),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide(color: const Color.fromARGB(255, 28, 26, 26)!, width: 1.5),
+                            ),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16), // Add padding inside the field
                           ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide(color: Colors.transparent, width: 2),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide(color: Colors.grey[700]!, width: 1),
-                          ),
+                          style: TextStyle(color: Colors.white),
+                          validator: (value) =>
+                              value?.isEmpty ?? true ? 'Enter username' : null,
                         ),
-                        style: TextStyle(color: Colors.white),
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Enter username' : null,
                       ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _passwordController,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          labelStyle: TextStyle(color: Colors.grey[400]),
-                          filled: true,
-                          fillColor: Colors.transparent,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide.none,
+                      const SizedBox(height: 20),
+                      Container(
+                        width: MediaQuery.of(context).size.width * 0.87, // Reduce width to 80% of screen width
+                        child: TextFormField(
+                          controller: _passwordController,
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            labelStyle: TextStyle(color: Colors.grey[400]),
+                            filled: true,
+                            fillColor: Colors.transparent,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide(color: const Color.fromARGB(255, 28, 26, 26)!, width: 2),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide(color: const Color.fromARGB(255, 28, 26, 26)!, width: 1.5),
+                            ),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16), // Add padding inside the field
                           ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide(color: Colors.transparent, width: 2),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide(color: Colors.grey[700]!, width: 1),
-                          ),
+                          style: TextStyle(color: Colors.white),
+                          obscureText: true,
+                          validator: (value) =>
+                              value?.isEmpty ?? true ? 'Enter password' : null,
                         ),
-                        style: TextStyle(color: Colors.white),
-                        obscureText: true,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Enter password' : null,
                       ),
                       const SizedBox(height: 30),
-                      ElevatedButton(
-                        onPressed: _login,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color.fromARGB(147, 89, 89, 89)!, // Background color of button
-                          foregroundColor: Colors.white, // Text color
-                          minimumSize: Size(double.infinity, 50), // Full width and height
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      Container(
+                        width: MediaQuery.of(context).size.width * 0.85, // Reduce width to 80% of screen width
+                        child: ElevatedButton(
+                          onPressed: _login,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color.fromARGB(147, 89, 89, 89)!, // Background color of button
+                            foregroundColor: Colors.white, // Text color
+                            minimumSize: Size(double.infinity, 50), // Full width and height
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
+                          child: _isLoading
+                              ? SpinKitWave(
+                                  color: Colors.white,
+                                  size: 25.0,
+                                )
+                              : const Text('Login'),
                         ),
-                        child: _isLoading
-                            ? CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : const Text('Login'),
-                      )
+                      ),
                     ],
                   ),
                 ),

@@ -75,6 +75,7 @@ class BackgroundContainer extends StatelessWidget {
         children: [
           Container(
             decoration: BoxDecoration(
+              
               image: DecorationImage(
                 image: NetworkImage(
                   'https://images.unsplash.com/photo-1618123069754-cd64c230a169?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YmxhY2slMjB0ZXh0dXJlfGVufDB8fDB8fHww',

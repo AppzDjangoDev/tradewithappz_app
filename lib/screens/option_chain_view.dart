@@ -36,10 +36,13 @@ class OptionChainView extends StatelessWidget {
           // Foreground content
           Column(
             children: <Widget>[
+              // Add padding to the top of the carousel
+              const SizedBox(height:125),
               CarouselExample(
-                cardInfos: cardInfos,
-                height: carouselHeight,
-              ),
+                  cardInfos: cardInfos,
+                  height: carouselHeight,
+                ),
+          
               SizedBox(height: 10), // Adjust height as needed
               Expanded(
                 child: SpacedItemsList(
@@ -113,7 +116,7 @@ class HeroLayoutCard extends StatelessWidget {
               softWrap: false,
               style: Theme.of(context)
                   .textTheme
-                  .titleMedium
+                  .titleLarge
                   ?.copyWith(color: Colors.white),
             ),
             const SizedBox(height: 3),
@@ -123,7 +126,7 @@ class HeroLayoutCard extends StatelessWidget {
               softWrap: false,
               style: Theme.of(context)
                   .textTheme
-                  .bodyMedium
+                  .bodyLarge
                   ?.copyWith(color: Colors.white),
             ),
           ],
@@ -283,11 +286,11 @@ class ItemWidget extends StatelessWidget {
 }
 
 enum CardInfo {
-  dashBoard('Index : Dashboard', 'Dashboard Overview status'),
-  midcpnifty('Index : MIDCPNIFTY', 'Running : 42000'),
-  finnifty('Index : FINNIFTY', 'Running : 34000'),
-  bankNifty('Index : BANK NIFTY', 'Running : 52000'),
-  nifty('Index : NIFTY', 'Running : 16000'),
+  dashBoard(' Dashboard', 'Dashboard Overview status'),
+  midcpnifty(' MIDCPNIFTY', 'Running : 42000'),
+  finnifty(' FINNIFTY', 'Running : 34000'),
+  bankNifty(' BANK NIFTY', 'Running : 52000'),
+  nifty(' NIFTY', 'Running : 16000'),
   portfolio('Portfolio : 25000', 'order Qty : 10');
 
   const CardInfo(this.title, this.subtitle);

@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart'; // For sha256 hashing
-import 'home_page.dart'; // Import the HomePage for AppBar and BottomNavigationBar
+import 'home_page.dart'; // Import the HomePage for navigation
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -90,46 +90,9 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {
-            Scaffold.of(context).openDrawer(); // Open the drawer if available
-          },
-        ),
-        title: Text('Profile'),
-        actions: <Widget>[
-          IconButton(
-            icon: Icon(
-              Theme.of(context).brightness == Brightness.dark
-                  ? Icons.nightlight_round
-                  : Icons.wb_sunny,
-            ),
-            onPressed: () {
-              // Toggle theme mode here
-            },
-          ),
-          Padding(
-            padding: const EdgeInsetsDirectional.only(end: 25.0),
-            child: GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const ProfilePage()),
-                );
-              },
-              child: CircleAvatar(
-                child: Icon(Icons.account_circle),
-              ),
-            ),
-          ),
-        ],
-        backgroundColor: Color.fromARGB(243, 9, 9, 9), // Define the color for consistency
-        elevation: 0, // Removes the shadow
-        iconTheme: IconThemeData(color: Colors.white), // Adjust the icon color if needed
-        titleTextStyle: TextStyle(color: Colors.white), // Adjust the title color if needed
-      ),
       body: Stack(
         children: [
+          // Background image
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -140,6 +103,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
           ),
+          // Profile content
           FutureBuilder<Map<String, dynamic>>(
             future: _profileData,
             builder: (context, snapshot) {
@@ -158,6 +122,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const SizedBox(height: 125),
                       Center(
                         child: Card(
                           color: Color.fromARGB(243, 9, 9, 9), // Background color of the card
@@ -179,7 +144,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 SizedBox(height: 16),
                                 Text(
                                   profileData['name'] ?? 'Name not available',
-                                  style: Theme.of(context).textTheme.titleMedium,
+                                  style: Theme.of(context).textTheme.headlineMedium,
                                   textAlign: TextAlign.center,
                                 ),
                                 SizedBox(height: 8),
@@ -223,14 +188,61 @@ class _ProfilePageState extends State<ProfilePage> {
                         'PAN: ${profileData['PAN'] ?? 'Not available'}',
                         Icons.credit_card,
                       ),
-                      SizedBox(height: 30),
-                      _buildBackButton(context),
                       SizedBox(height: 80),
+                      _buildBackButton(context),
                     ],
                   ),
                 ),
               );
             },
+          ),
+          // Floating Action Buttons
+          Positioned(
+            top: 60,
+            left: 16,
+            child: FloatingActionButton(
+              onPressed: () {
+                Scaffold.of(context).openDrawer(); // Opens the drawer if present
+              },
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: const Icon(Icons.menu, color: Colors.white),
+            ),
+          ),
+          Positioned(
+            top: 60,
+            right: 16,
+            child: FloatingActionButton(
+              onPressed: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const HomePage()),
+                );
+              },
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: const Icon(Icons.dashboard, color: Colors.white),
+            ),
+          ),
+          Positioned(
+            top: 60,
+            left: 80,
+            right: 80,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(
+                  "My Account",
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -281,7 +293,7 @@ class _ProfilePageState extends State<ProfilePage> {
         elevation: 10,
         child: SizedBox(
           width: double.infinity, // Full width
-          height: 60, // Fixed height
+          height:80, // Fixed height
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -301,5 +313,4 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-
 }
