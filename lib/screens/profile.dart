@@ -188,8 +188,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         'PAN: ${profileData['PAN'] ?? 'Not available'}',
                         Icons.credit_card,
                       ),
-                      SizedBox(height: 80),
+                      SizedBox(height:80),
                       _buildBackButton(context),
+                      SizedBox(height:50),
                     ],
                   ),
                 ),
@@ -197,18 +198,18 @@ class _ProfilePageState extends State<ProfilePage> {
             },
           ),
           // Floating Action Buttons
-          Positioned(
-            top: 60,
-            left: 16,
-            child: FloatingActionButton(
-              onPressed: () {
-                Scaffold.of(context).openDrawer(); // Opens the drawer if present
-              },
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              child: const Icon(Icons.menu, color: Colors.white),
-            ),
-          ),
+          // Positioned(
+          //   top: 60,
+          //   left: 16,
+          //   child: FloatingActionButton(
+          //     onPressed: () {
+          //       Scaffold.of(context).openDrawer(); // Opens the drawer if present
+          //     },
+          //     backgroundColor: Colors.transparent,
+          //     elevation: 0,
+          //     child: const Icon(Icons.menu, color: Colors.white),
+          //   ),
+          // ),
           Positioned(
             top: 60,
             right: 16,
@@ -220,7 +221,7 @@ class _ProfilePageState extends State<ProfilePage> {
               },
               backgroundColor: Colors.transparent,
               elevation: 0,
-              child: const Icon(Icons.dashboard, color: Colors.white),
+              child: const Icon(Icons.home, color: Colors.white),
             ),
           ),
           Positioned(
@@ -236,7 +237,7 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Center(
                 child: Text(
                   "My Account",
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
@@ -293,24 +294,27 @@ class _ProfilePageState extends State<ProfilePage> {
         elevation: 10,
         child: SizedBox(
           width: double.infinity, // Full width
-          height:80, // Fixed height
+          height: 65, // Fixed height
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                Icon(Icons.arrow_back, color: const Color.fromARGB(255, 107, 107, 107)),
-                SizedBox(width: 50),
                 Expanded(
-                  child: Text(
-                    'Back to Home',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  child: Align(
+                    alignment: Alignment.center, // Center align the text
+                    child: Text(
+                      'Back to Home',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold, // Make text bold
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ),
-      ),
+      )
     );
   }
 }

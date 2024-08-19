@@ -2,22 +2,62 @@ import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart'; // For debugging purposes
-import 'package:slide_action/slide_action.dart';
-import 'package:slider_button/slider_button.dart';
+import 'package:web_socket_channel/web_socket_channel.dart'; // For WebSocket communication
+import 'package:shared_preferences/shared_preferences.dart'; // For shared preferences
 
-class OptionChainView extends StatelessWidget {
+class OptionChainView extends StatefulWidget {
+  final List<CardInfo> cardInfos;
+  final double carouselHeight;
+  final double listTileHeight;
+  final double carouselWidth;
+  final String webSocketUrl;
+
   const OptionChainView({
     super.key,
     required this.cardInfos,
     required this.carouselHeight,
     required this.listTileHeight,
     required this.carouselWidth,
+    required this.webSocketUrl,
   });
 
-  final List<CardInfo> cardInfos;
-  final double carouselHeight;
-  final double listTileHeight;
-  final double carouselWidth;
+  @override
+  _OptionChainViewState createState() => _OptionChainViewState();
+}
+
+class _OptionChainViewState extends State<OptionChainView> {
+  late WebSocketChannel _channel;
+  late SharedPreferences _prefs;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeWebSocket();
+    _initializeSharedPreferences();
+  }
+
+  void _initializeWebSocket() {
+    _channel = WebSocketChannel.connect(Uri.parse(widget.webSocketUrl));
+    _channel.stream.listen((message) {
+      // Handle WebSocket messages here
+      // e.g., update UI based on the message
+    }, onError: (error) {
+      if (kDebugMode) {
+        print('WebSocket error: $error');
+      }
+    });
+  }
+
+  void _initializeSharedPreferences() async {
+    _prefs = await SharedPreferences.getInstance();
+    // Use _prefs to store and retrieve data if needed
+  }
+
+  @override
+  void dispose() {
+    _channel.sink.close();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +68,9 @@ class OptionChainView extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: NetworkImage('https://images.unsplash.com/photo-1618123069754-cd64c230a169?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YmxhY2slMjB0ZXh0dXJlfGVufDB8fDB8fHww'),
+                image: NetworkImage(
+                  'https://images.unsplash.com/photo-1618123069754-cd64c230a169?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YmxhY2slMjB0ZXh0dXJlfGVufDB8fDB8fHww',
+                ),
                 fit: BoxFit.cover,
               ),
             ),
@@ -36,18 +78,16 @@ class OptionChainView extends StatelessWidget {
           // Foreground content
           Column(
             children: <Widget>[
-              // Add padding to the top of the carousel
-              const SizedBox(height:125),
+              const SizedBox(height: 125),
               CarouselExample(
-                  cardInfos: cardInfos,
-                  height: carouselHeight,
-                ),
-          
-              SizedBox(height: 10), // Adjust height as needed
+                cardInfos: widget.cardInfos,
+                height: widget.carouselHeight,
+              ),
+              SizedBox(height: 10),
               Expanded(
                 child: SpacedItemsList(
-                  listTileHeight: listTileHeight,
-                  carouselWidth: carouselWidth,
+                  listTileHeight: widget.listTileHeight,
+                  carouselWidth: widget.carouselWidth,
                 ),
               ),
             ],
@@ -72,7 +112,7 @@ class CarouselExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return CarouselSlider(
       options: CarouselOptions(
-        height: height, // Use the dynamic height
+        height: height,
         viewportFraction: 0.95,
         enlargeCenterPage: true,
       ),
@@ -103,7 +143,7 @@ class HeroLayoutCard extends StatelessWidget {
     final double width = MediaQuery.of(context).size.width;
     return Container(
       width: width * 0.95,
-      color: Color.fromARGB(243, 9, 9, 9), // Define the color for consistency
+      color: Color.fromARGB(243, 9, 9, 9),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -195,8 +235,8 @@ class ItemWidget extends StatelessWidget {
       }
     }
 
-    final double buttonHeight = height * 0.8; // Adjust fraction as needed
-    final double buttonWidth = 130; // Adjust width for buttons
+    final double buttonHeight = height * 0.8;
+    final double buttonWidth = 130;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 3.0),
@@ -204,8 +244,8 @@ class ItemWidget extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        color: Color.fromARGB(243, 9, 9, 9), // Define the color for consistency
-        elevation: 0, // Remove shadow
+        color: Color.fromARGB(243, 9, 9, 9),
+        elevation: 0,
         child: SizedBox(
           height: height,
           child: Row(
@@ -216,7 +256,7 @@ class ItemWidget extends StatelessWidget {
                 height: buttonHeight,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.withOpacity(0.9), // Semi-transparent green
+                    backgroundColor: Colors.green.withOpacity(0.9),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -243,7 +283,7 @@ class ItemWidget extends StatelessWidget {
                     margin: const EdgeInsets.symmetric(horizontal: 3),
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.9), // Semi-transparent blue
+                      color: Colors.blue.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -258,7 +298,7 @@ class ItemWidget extends StatelessWidget {
                 height: buttonHeight,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.withOpacity(0.9), // Semi-transparent red
+                    backgroundColor: Colors.red.withOpacity(0.9),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -286,11 +326,11 @@ class ItemWidget extends StatelessWidget {
 }
 
 enum CardInfo {
-  dashBoard(' Dashboard', 'Dashboard Overview status'),
-  midcpnifty(' MIDCPNIFTY', 'Running : 42000'),
-  finnifty(' FINNIFTY', 'Running : 34000'),
-  bankNifty(' BANK NIFTY', 'Running : 52000'),
-  nifty(' NIFTY', 'Running : 16000'),
+  dashBoard('Dashboard', 'Dashboard Overview status'),
+  midcpnifty('MIDCPNIFTY', 'Running : 42000'),
+  finnifty('FINNIFTY', 'Running : 34000'),
+  bankNifty('BANK NIFTY', 'Running : 52000'),
+  nifty('NIFTY', 'Running : 16000'),
   portfolio('Portfolio : 25000', 'order Qty : 10');
 
   const CardInfo(this.title, this.subtitle);
