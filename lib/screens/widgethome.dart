@@ -68,7 +68,7 @@ class WidgetHome extends StatelessWidget {
           _buildBackgroundImage(),
           Center(
             child: ElevatedButton(
-              onPressed: () => _launchUrl('https://3a4a-2401-4900-6671-6213-c9fa-ec22-8bdf-8492.ngrok-free.app/login'),
+              onPressed: () => _launchUrl('https://605f-2401-4900-9078-8c79-bd3f-d02b-6652-c8ea.ngrok-free.app/login'),
               child: const Text('FYERS LOGIN'),
             ),
           ),
@@ -272,7 +272,7 @@ class WidgetHome extends StatelessWidget {
   }
 
   Future<Map<String, dynamic>> fetchTradeConfigurations() async {
-    final url = Uri.parse('https://3a4a-2401-4900-6671-6213-c9fa-ec22-8bdf-8492.ngrok-free.app/api/fetch-trade-configurations');
+    final url = Uri.parse('https://605f-2401-4900-9078-8c79-bd3f-d02b-6652-c8ea.ngrok-free.app/api/fetch-trade-configurations');
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
@@ -481,7 +481,7 @@ class DashboardCard extends StatelessWidget {
   }
 
   Future<void> _fetchAndUpdateConfigurations() async {
-    const url = 'https://3a4a-2401-4900-6671-6213-c9fa-ec22-8bdf-8492.ngrok-free.app/api/fetch-trade-configurations';
+    const url = 'https://605f-2401-4900-9078-8c79-bd3f-d02b-6652-c8ea.ngrok-free.app/api/fetch-trade-configurations';
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {

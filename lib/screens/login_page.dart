@@ -25,7 +25,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _retrieveCsrfToken() async {
-    final url = 'https://3a4a-2401-4900-6671-6213-c9fa-ec22-8bdf-8492.ngrok-free.app/api/csrf-token/'; // Replace with your actual CSRF endpoint
+    final url = 'https://605f-2401-4900-9078-8c79-bd3f-d02b-6652-c8ea.ngrok-free.app/api/csrf-token/'; // Replace with your actual CSRF endpoint
     try {
       final response = await http.get(Uri.parse(url));
 
@@ -52,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
         _isLoading = true; // Show loading animation
       });
 
-      final url = 'https://3a4a-2401-4900-6671-6213-c9fa-ec22-8bdf-8492.ngrok-free.app/api/login/';
+      final url = 'https://605f-2401-4900-9078-8c79-bd3f-d02b-6652-c8ea.ngrok-free.app/api/login/';
       try {
         final response = await http.post(
           Uri.parse(url),

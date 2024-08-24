@@ -4,6 +4,9 @@ import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart'; // For debugging purposes
 import 'package:web_socket_channel/web_socket_channel.dart'; // For WebSocket communication
 import 'package:shared_preferences/shared_preferences.dart'; // For shared preferences
+import 'dart:convert';
+import 'package:flutter_spinkit/flutter_spinkit.dart'; // Import the spinkit package
+
 
 class OptionChainView extends StatefulWidget {
   final List<CardInfo> cardInfos;
@@ -11,6 +14,7 @@ class OptionChainView extends StatefulWidget {
   final double listTileHeight;
   final double carouselWidth;
   final String webSocketUrl;
+
 
   const OptionChainView({
     super.key,
@@ -25,28 +29,96 @@ class OptionChainView extends StatefulWidget {
   _OptionChainViewState createState() => _OptionChainViewState();
 }
 
-class _OptionChainViewState extends State<OptionChainView> {
-  late WebSocketChannel _channel;
-  late SharedPreferences _prefs;
 
-  @override
-  void initState() {
-    super.initState();
-    _initializeWebSocket();
-    _initializeSharedPreferences();
-  }
+  class _OptionChainViewState extends State<OptionChainView> {
+    List<Map<String, dynamic>> _top5CESymbols = [];
+    List<Map<String, dynamic>> _top5PESymbols = [];
+    late WebSocketChannel _channel;
+    late SharedPreferences _prefs;
+    bool _isLoading = true;
+
+    @override
+    void initState() {
+      super.initState();
+      _initializeWebSocket();
+      _initializeSharedPreferences();
+    }
 
   void _initializeWebSocket() {
     _channel = WebSocketChannel.connect(Uri.parse(widget.webSocketUrl));
-    _channel.stream.listen((message) {
-      // Handle WebSocket messages here
-      // e.g., update UI based on the message
-    }, onError: (error) {
-      if (kDebugMode) {
-        print('WebSocket error: $error');
-      }
-    });
+
+    final Map<String, Map<String, dynamic>> ceSymbolsMap = {}; // Map to store symbols and LTP for CE
+    final Map<String, Map<String, dynamic>> peSymbolsMap = {}; // Map to store symbols and LTP for PE
+
+    _channel.stream.listen(
+      (message) {
+        final List<String> messages = (message as String).split('\n');
+
+        for (final msg in messages) {
+          try {
+            final sanitizedMsg = msg.replaceAll("'", '"');
+            final Map<String, dynamic> data = jsonDecode(sanitizedMsg);
+            final symbol = data['symbol'];
+            final ltp = data['ltp']?.toDouble(); // Assuming LTP is available and needs to be converted to double
+
+            // Check the type and process accordingly
+            final type = data['type'];
+            if (type == 'if') {
+              // If type is 'if', print the LTP and symbol
+              print('LTP: $ltp, Symbol: $symbol');
+            }
+
+            // Extract the type (CE or PE) and the numerical part
+            final regex = RegExp(r'(\d+)(CE|PE)$');
+            final match = regex.firstMatch(symbol);
+
+            if (match != null && ltp != null) {
+              final numericPart = match.group(1);
+              final typePart = match.group(2);
+
+              final formattedSymbol = '$numericPart $typePart';
+
+              final symbolData = {'symbol': formattedSymbol, 'ltp': ltp, 'code': symbol};
+
+              if (typePart == 'CE') {
+                ceSymbolsMap[formattedSymbol] = symbolData;
+              } else if (typePart == 'PE') {
+                peSymbolsMap[formattedSymbol] = symbolData;
+              }
+            }
+          } catch (e) {
+            print('Error decoding JSON message: $e');
+          }
+        }
+
+        final List<Map<String, dynamic>> allCESymbols = ceSymbolsMap.values.toList();
+        final List<Map<String, dynamic>> allPESymbols = peSymbolsMap.values.toList();
+
+        allCESymbols.sort((a, b) => a['symbol'].compareTo(b['symbol']));
+        allPESymbols.sort((a, b) => b['symbol'].compareTo(a['symbol']));
+
+        final List<Map<String, dynamic>> top5CE = allCESymbols.take(5).toList();
+        final List<Map<String, dynamic>> top5PE = allPESymbols.take(5).toList();
+
+        setState(() {
+          _top5CESymbols = top5CE;
+          _top5PESymbols = top5PE;
+          _isLoading = false; // Set loading to false when data is fetched
+        });
+
+        print('Top 5 CE Symbols: $top5CE');
+        print('Top 5 PE Symbols: $top5PE');
+      },
+      onError: (error) {
+        if (kDebugMode) {
+          print('WebSocket error: $error');
+        }
+      },
+    );
   }
+
+
+
 
   void _initializeSharedPreferences() async {
     _prefs = await SharedPreferences.getInstance();
@@ -82,14 +154,46 @@ class _OptionChainViewState extends State<OptionChainView> {
               CarouselExample(
                 cardInfos: widget.cardInfos,
                 height: widget.carouselHeight,
+                
               ),
               SizedBox(height: 10),
-              Expanded(
-                child: SpacedItemsList(
-                  listTileHeight: widget.listTileHeight,
-                  carouselWidth: widget.carouselWidth,
+              if (_isLoading)
+                Center(
+                  child: SpinKitFadingCircle(
+                    color: Colors.white,
+                    size: 50.0,
+                  ),
                 ),
-              ),
+              Expanded(
+                  child: CarouselSlider(
+                    options: CarouselOptions(
+                      enlargeCenterPage: true,
+                      height: MediaQuery.of(context).size.height * 1.0, // Adjust as needed
+                      viewportFraction: 0.95,
+                      enableInfiniteScroll: false, // Set to true if you want infinite scrolling
+                    ),
+                    items: [
+                      Container(
+                        color: Colors.green.withOpacity(0.1), // Green transparent background
+                        child: SpacedItemsList(
+                          listTileHeight: 80.0, // Adjust as needed
+                          carouselWidth: MediaQuery.of(context).size.width,
+                          items: _top5CESymbols, // Pass the list of CE symbols
+                        ),
+                      ),
+                      Container(
+                        color: Colors.red.withOpacity(0.1), // Red transparent background
+                        child: SpacedItemsList(
+                          listTileHeight: 80.0, // Adjust as needed
+                          carouselWidth: MediaQuery.of(context).size.width,
+                          items: _top5PESymbols, // Pass the list of PE symbols
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                        // Loading spinner
+              
             ],
           ),
         ],
@@ -97,6 +201,7 @@ class _OptionChainViewState extends State<OptionChainView> {
     );
   }
 }
+
 
 class CarouselExample extends StatelessWidget {
   const CarouselExample({
@@ -176,33 +281,36 @@ class HeroLayoutCard extends StatelessWidget {
   }
 }
 
+
+
+
 class SpacedItemsList extends StatelessWidget {
+  final double listTileHeight;
+  final double carouselWidth;
+  final List<Map<String, dynamic>> items; // Accept list of items
+
   const SpacedItemsList({
     super.key,
     required this.listTileHeight,
     required this.carouselWidth,
+    required this.items,
   });
-
-  final double listTileHeight;
-  final double carouselWidth;
 
   @override
   Widget build(BuildContext context) {
-    const items = 8;
-
     return SingleChildScrollView(
       child: Column(
-        children: List.generate(
-          items,
-          (index) => Container(
+        children: items.map((item) {
+          return Container(
             width: carouselWidth,
             margin: const EdgeInsets.symmetric(vertical: 0.1),
             child: ItemWidget(
-              text: 'Strike ${index + 1}',
+              text: item['symbol'], // Use the symbol from the item
+              ltp: item['ltp'],
               height: listTileHeight,
             ),
-          ),
-        ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -213,10 +321,12 @@ class ItemWidget extends StatelessWidget {
     super.key,
     required this.text,
     required this.height,
+    required this.ltp,
   });
 
   final String text;
   final double height;
+  final double ltp;
 
   @override
   Widget build(BuildContext context) {
@@ -235,7 +345,7 @@ class ItemWidget extends StatelessWidget {
       }
     }
 
-    final double buttonHeight = height * 0.8;
+    final double buttonHeight = height * 0.82;
     final double buttonWidth = 130;
 
     return Container(
@@ -279,20 +389,47 @@ class ItemWidget extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   alignment: Alignment.center,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      text,
-                      style: const TextStyle(color: Colors.white),
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center, // Center the badges horizontally
+                    children: [
+                      // Badge for Strike
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[900], // Example color for LTP
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          text, // Pass Strike value here
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      // Badge for LTP
+                      Container(
+                        width: 50, // Fixed width for consistency
+                        height: 30,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center( // Center the text within the container
+                          child: Text(
+                            ltp.toInt().toString(), // Convert LTP to Integer and then to String
+                            style: const TextStyle(color: Colors.white),
+                            textAlign: TextAlign.center, // Center the text horizontally
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
+
+
               SizedBox(
                 width: buttonWidth,
                 height: buttonHeight,
@@ -324,6 +461,7 @@ class ItemWidget extends StatelessWidget {
     );
   }
 }
+
 
 enum CardInfo {
   dashBoard('Dashboard', 'Dashboard Overview status'),
