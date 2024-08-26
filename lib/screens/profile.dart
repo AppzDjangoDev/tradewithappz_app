@@ -198,18 +198,18 @@ class _ProfilePageState extends State<ProfilePage> {
             },
           ),
           // Floating Action Buttons
-          // Positioned(
-          //   top: 60,
-          //   left: 16,
-          //   child: FloatingActionButton(
-          //     onPressed: () {
-          //       Scaffold.of(context).openDrawer(); // Opens the drawer if present
-          //     },
-          //     backgroundColor: Colors.transparent,
-          //     elevation: 0,
-          //     child: const Icon(Icons.menu, color: Colors.white),
-          //   ),
-          // ),
+          Positioned(
+            top: 60,
+            left: 16,
+            child: FloatingActionButton(
+              onPressed: () {
+                Scaffold.of(context).openDrawer(); // Opens the drawer if present
+              },
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: const Icon(Icons.menu, color: Colors.white),
+            ),
+          ),
           Positioned(
             top: 60,
             right: 16,

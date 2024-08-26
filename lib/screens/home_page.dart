@@ -4,12 +4,15 @@ import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart'; // Import the spinkit package
 import '../theme_notifier.dart';
-import 'option_chain_view.dart';
 import 'widgethome.dart';
 import 'profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
-import 'controls.dart'; // Import the new Controls page
+import 'controls.dart'; // Import the Controls page
+import 'midcap_nifty_page.dart'; // Ensure this path is correct
+import 'finnifty_page.dart'; // Ensure this path is correct
+import 'banknifty_page.dart'; // Ensure this path is correct
+import 'nifty_page.dart'; // Ensure this path is correct
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,6 +26,7 @@ class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String _csrfToken = ''; // Store the CSRF token
   bool _isLoading = true; // State to track loading
+  bool _dashboardVisited = true; // Track if the dashboard has been visited
 
   static const List<String> _titles = [
     'Dashboard',
@@ -33,35 +37,15 @@ class _HomePageState extends State<HomePage> {
     'Controls',
   ];
 
-  static const List<List<CardInfo>> _cardInfos = [
-    dashBoardCardInfo,
-    midcpNiftyCardInfo,
-    finniftyCardInfo,
-    bankNiftyCardInfo,
-    niftyCardInfo,
-    controlsCardInfo,
-  ];
-
-  static const List<String> _webSocketUrls = [
-    '', // Replace with actual WebSocket URLs
-    'wss://605f-2401-4900-9078-8c79-bd3f-d02b-6652-c8ea.ngrok-free.app/ws/fyersindexdata/MIDCPNIFTY/',
-    'wss://605f-2401-4900-9078-8c79-bd3f-d02b-6652-c8ea.ngrok-free.app/ws/fyersindexdata/FINNIFTY/',
-    'wss://605f-2401-4900-9078-8c79-bd3f-d02b-6652-c8ea.ngrok-free.app/ws/fyersindexdata/NIFTYBANK/',
-    'wss://605f-2401-4900-9078-8c79-bd3f-d02b-6652-c8ea.ngrok-free.app/ws/fyersindexdata/NIFTY50/',
-    '',
-  ];
-
-    // List of icons for the bottom navigation items
+  // List of icons for the bottom navigation items
   final List<IconData> _icons = [
     Icons.home,  // Dashboard
     Icons.bar_chart, // Midcap Nifty
     Icons.pie_chart, // Fin Nifty
-    Icons.attach_money, // Bank Nifty
+    Icons.attach_money, // BANKNIFTY
     Icons.trending_up, // Nifty
     Icons.settings, // Controls 
   ];
-
-
 
   @override
   void initState() {
@@ -71,7 +55,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _retrieveCSRFToken() async {
     final url =
-        'https://605f-2401-4900-9078-8c79-bd3f-d02b-6652-c8ea.ngrok-free.app/api/csrf-token/'; // Replace with your actual CSRF endpoint
+        'https://93bd-2401-4900-9078-8c79-6cba-2d1b-fdf9-d8c4.ngrok-free.app/api/csrf-token/'; // Replace with your actual CSRF endpoint
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
@@ -100,7 +84,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _logout() async {
     try {
-      final url = 'https://605f-2401-4900-9078-8c79-bd3f-d02b-6652-c8ea.ngrok-free.app/api/logout/';
+      final url = 'https://93bd-2401-4900-9078-8c79-6cba-2d1b-fdf9-d8c4.ngrok-free.app/api/logout/';
       final response = await http.post(
         Uri.parse(url),
         headers: {
@@ -137,14 +121,53 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (index == 0) {
+      // If the user navigates to the dashboard, reset the flags
+      setState(() {
+        _selectedIndex = index;
+        _dashboardVisited = true;
+      });
+    } else if (_dashboardVisited && index > 0) {
+      // Allow navigation to other pages only if the dashboard has been visited
+      setState(() {
+        _selectedIndex = index;
+        _dashboardVisited = false; // Disable further navigation to other pages
+      });
+    } else {
+      // If not allowed, reset to dashboard
+      // setState(() {
+      //   _selectedIndex = index;
+      // });
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(
+      //     content: Text('Please visit the Dashboard before navigating to other pages.'),
+      //   ),
+      // );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+
+    Widget _getPage(int index) {
+      switch (index) {
+        case 0:
+          return const WidgetHome();
+        case 1:
+          return const MidcapNiftyPage();
+        case 2:
+          return const FinniftyPage();
+        case 3:
+          return const BankniftyPage();
+        case 4:
+          return const NiftyPage();
+        case 5:
+          return const ControlsPage();
+        default:
+          return const WidgetHome();
+      }
+    }
 
     return Scaffold(
       key: _scaffoldKey,
@@ -215,46 +238,13 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Stack(
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage('https://images.unsplash.com/photo-1618123069754-cd64c230a169?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YmxhY2slMjB0ZXh0dXJlfGVufDB8fDB8fHww'),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
+          _getPage(_selectedIndex),
           if (_isLoading)
             Center(
               child: SpinKitFadingCircle(
                 color: Colors.white,
                 size: 50.0,
               ),
-            )
-          else
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final double screenHeight = constraints.maxHeight;
-                final double appBarHeight = kToolbarHeight;
-                final double buttonHeight = 40.0 + 16.0 + 16.0; // Height of FloatingActionButton area
-                final double carouselHeight = screenHeight * 0.19;
-                final double listTileHeight = (screenHeight - appBarHeight - carouselHeight - buttonHeight) / 9;
-                final double carouselWidth = constraints.maxWidth * 0.95;
-
-                return _selectedIndex == 0
-                    ? const WidgetHome()
-                    : (_selectedIndex == 5
-                        ? ControlsPage()
-                        : Padding(
-                            padding: EdgeInsets.only(top: 0), // Add padding equivalent to button area height
-                            child: OptionChainView(
-                              cardInfos: _cardInfos[_selectedIndex],
-                              carouselHeight: carouselHeight,
-                              listTileHeight: listTileHeight,
-                              carouselWidth: carouselWidth,
-                              webSocketUrl: _webSocketUrls[_selectedIndex],
-                            ),
-                          ));
-              },
             ),
           Positioned(
             top: 60,
@@ -306,17 +296,24 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       bottomNavigationBar: SalomonBottomBar(
+        margin: EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
+        items: List.generate(_titles.length, (index) {
+          return SalomonBottomBarItem(
+            icon: index == 0
+                ? SizedBox(
+                    width: 34.0, // Adjust the size as needed
+                    height: 34.0,
+                    child: Icon(_icons[index], size: 34.0), // Adjust the size as needed
+                  )
+                : Icon(_icons[index]),
+            title: Text(_titles[index]),
+            selectedColor: Colors.blue,
+          );
+        }),
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        items: [
-          for (int i = 0; i < _titles.length; i++)
-            SalomonBottomBarItem(
-              icon: Icon(_icons[i]),
-              title: Text(_titles[i]),
-              selectedColor: Colors.grey,
-            ),
-        ],
       ),
     );
   }
 }
+

@@ -372,7 +372,7 @@ enum CardInfo {
   dashBoard('Index : Dashboard', 'Dashboard Overview status'),
   MIDCPNIFTY('Index : MIDCPNIFTY', 'Running : 42000'),
   finnifty('Index : FINNIFTY', 'Running : 34000'),
-  bankNifty('Index : Bank Nifty', 'Running : 52000'),
+  bankNifty('Index : BANKNIFTY', 'Running : 52000'),
   nifty('Index : NIFTY', 'Running : 16000'),
   portfolio('Portfolio : 25000', 'order Qty : 10');
 
