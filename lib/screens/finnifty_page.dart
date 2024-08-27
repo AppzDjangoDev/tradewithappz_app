@@ -94,7 +94,7 @@ class _OptionChainViewFinniftyState extends State<OptionChainViewFinnifty> {
       _channel?.sink.add(disconnectMessage);
 
       // Optionally wait for a short period to ensure the server processes the disconnect message
-      await Future.delayed(Duration(seconds: 5));
+      
 
       // Close the WebSocket connection
       _channel?.sink.close();
@@ -382,6 +382,7 @@ class SpacedItemsList extends StatelessWidget {
             child: ItemWidget(
               text: item['symbol'], // Use the symbol from the item
               ltp: item['ltp'],
+              code: item['code'],
               height: listTileHeight,
             ),
           );
@@ -397,11 +398,13 @@ class ItemWidget extends StatelessWidget {
     required this.text,
     required this.height,
     required this.ltp,
+    required this.code,
   });
 
   final String text;
   final double height;
   final double ltp;
+  final String code;
 
   @override
   Widget build(BuildContext context) {
@@ -447,8 +450,9 @@ class ItemWidget extends StatelessWidget {
                     ),
                   ),
                   onPressed: () {
-                    _playTapSound();
+                    // _playTapSound();
                     // Add Buy button action here
+                    submitOrder(context, code);
                   },
                   child: const Text(
                     'Buy',
@@ -514,7 +518,7 @@ class ItemWidget extends StatelessWidget {
                     ),
                   ),
                   onPressed: ()async {
-                        // _playTapSound();
+                        // // _playTapSound();
                         try {
                           await deletePositions(context);
                           print('Positions deleted successfully');
@@ -541,52 +545,121 @@ class ItemWidget extends StatelessWidget {
 }
 
 
+
 Future<void> deletePositions(BuildContext context) async {
   await refreshAccessToken();
   final prefs = await SharedPreferences.getInstance();
   final appId = prefs.getString('client_id');
   final accessToken = prefs.getString('access_token');
+  final openPositionSymbol = prefs.getString('open_position_symbol');
 
   if (appId == null || accessToken == null) {
     throw Exception('Missing app_id or access_token');
   }
 
-  final url = Uri.parse('https://api-t1.fyers.in/api/v3/positions');
-  final headers = {
+  if (openPositionSymbol == null || openPositionSymbol.isEmpty) {
+    ElegantNotification.info(
+      title: Text(
+        'Info',
+        style: TextStyle(color: Colors.grey[200]),
+      ),
+      description: Text(
+        'No Pending orders/open positions found',
+        style: TextStyle(color: Colors.grey[200]),
+      ),
+      background: Color.fromARGB(243, 9, 9, 9),
+      borderRadius: BorderRadius.circular(10),
+    ).show(context);
+    return;
+  }
+
+  // Cancel pending orders
+  final cancelUrl = Uri.parse('https://api-t1.fyers.in/api/v3/positions');
+  final cancelHeaders = {
     'Authorization': '$appId:$accessToken',
     'Content-Type': 'application/json',
   };
-  final body = jsonEncode({
-    'segment': [11],
-    'side': [1, -1],
-    'productType': ['INTRADAY', 'MARGIN'],
+  final cancelBody = jsonEncode({
+    'id': openPositionSymbol,
+    'pending_orders_cancel': 1,
   });
 
-  final response = await http.delete(url, headers: headers, body: body);
+  final cancelResponse = await http.delete(cancelUrl, headers: cancelHeaders, body: cancelBody);
 
-  if (response.statusCode == 200) {
-    final responseData = json.decode(response.body);
-    if (responseData['s'] == 'ok') {
-      ElegantNotification.success(
-        title: Text(
-          'Success!',
-          style: TextStyle(color: Colors.grey[200]),
-        ),
-        description: Text(
-          responseData['message'],
-          style: TextStyle(color: Colors.grey[200]),
-        ),
-        background: Color.fromARGB(243, 9, 9, 9),
-        borderRadius: BorderRadius.circular(10),
-      ).show(context);
+  if (cancelResponse.statusCode == 200) {
+    final cancelResponseData = json.decode(cancelResponse.body);
+    if (cancelResponseData['s'] == 'ok') {
+      // Proceed to delete positions
+      final url = Uri.parse('https://api-t1.fyers.in/api/v3/positions');
+      final headers = {
+        'Authorization': '$appId:$accessToken',
+        'Content-Type': 'application/json',
+      };
+      final body = jsonEncode({
+        'segment': [11],
+        'side': [1, -1],
+        'productType': ['INTRADAY', 'MARGIN'],
+      });
+
+      final response = await http.delete(url, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['s'] == 'ok') {
+          // Clear session values
+          await prefs.remove('open_position_symbol');
+          await prefs.remove('open_buy_price');
+          await prefs.remove('open_stoploss_price');
+
+          ElegantNotification.success(
+            title: Text(
+              'Success!',
+              style: TextStyle(color: Colors.grey[200]),
+            ),
+            description: Text(
+              responseData['message'],
+              style: TextStyle(color: Colors.grey[200]),
+            ),
+            background: Color.fromARGB(243, 9, 9, 9),
+            borderRadius: BorderRadius.circular(10),
+          ).show(context);
+        } else {
+          ElegantNotification.info(
+            title: Text(
+              'Info',
+              style: TextStyle(color: Colors.grey[200]),
+            ),
+            description: Text(
+              '${responseData['message']}',
+              style: TextStyle(color: Colors.grey[200]),
+            ),
+            background: Color.fromARGB(243, 9, 9, 9),
+            borderRadius: BorderRadius.circular(10),
+          ).show(context);
+        }
+      } else {
+        ElegantNotification.info(
+          title: Text(
+            'Info',
+            style: TextStyle(color: Colors.grey[300]),
+          ),
+          description: Text(
+            '${response.statusCode} ${response.body}',
+            style: TextStyle(color: Colors.grey[300]),
+          ),
+          background: Color.fromARGB(243, 9, 9, 9),
+          borderRadius: BorderRadius.circular(20),
+        ).show(context);
+        throw Exception('Failed to delete positions');
+      }
     } else {
-      ElegantNotification.error(
+      ElegantNotification.info(
         title: Text(
           'Info',
           style: TextStyle(color: Colors.grey[200]),
         ),
         description: Text(
-          '${responseData['message']}',
+          '${cancelResponseData['message']}',
           style: TextStyle(color: Colors.grey[200]),
         ),
         background: Color.fromARGB(243, 9, 9, 9),
@@ -594,23 +667,21 @@ Future<void> deletePositions(BuildContext context) async {
       ).show(context);
     }
   } else {
-    ElegantNotification.error(
+    ElegantNotification.info(
       title: Text(
         'Info',
         style: TextStyle(color: Colors.grey[300]),
       ),
       description: Text(
-        '${response.statusCode} ${response.body}',
+        '${cancelResponse.statusCode} ${cancelResponse.body}',
         style: TextStyle(color: Colors.grey[300]),
       ),
       background: Color.fromARGB(243, 9, 9, 9),
       borderRadius: BorderRadius.circular(20),
     ).show(context);
-    throw Exception('Failed to delete positions');
+    throw Exception('Failed to cancel pending orders');
   }
-}
-
-Future<void> refreshAccessToken() async {
+}Future<void> refreshAccessToken() async {
   final prefs = await SharedPreferences.getInstance();
   final appId = prefs.getString('client_id');
   final secretKey = prefs.getString('secret_key');
@@ -647,6 +718,247 @@ Future<void> refreshAccessToken() async {
     throw Exception('Failed to refresh access token');
   }
 }
+
+
+
+
+
+Future<void> submitOrder(BuildContext context, String code) async {
+  await refreshAccessToken();
+  final prefs = await SharedPreferences.getInstance();
+  final appId = prefs.getString('client_id') ?? '';
+  final accessToken = prefs.getString('access_token') ?? '';
+  final String? tradingConfigurationsStr = prefs.getString('tradingConfigurations');
+  int orderQty;
+
+  if (tradingConfigurationsStr != null) {
+    final Map<String, dynamic> tradingConfigurations = jsonDecode(tradingConfigurationsStr);
+    final int defaultOrderQty = tradingConfigurations['default_order_qty'];
+    orderQty = defaultOrderQty * 25;
+    print('default_order_qty: $defaultOrderQty');
+  } else {
+    print('tradingConfigurations not found in preferences');
+    return; // Exit the function if tradingConfigurations is not found
+  }
+
+  if (appId.isEmpty || accessToken.isEmpty) {
+    throw Exception('Missing app_id or access_token');
+  }
+
+  final url = Uri.parse('https://api-t1.fyers.in/api/v3/orders/sync');
+  final headers = {
+    'Authorization': '$appId:$accessToken',
+    'Content-Type': 'application/json',
+  };
+  final body = jsonEncode({
+    'symbol': code,
+    'qty': orderQty,
+    'type': 2,
+    'side': 1,
+    'productType': 'MARGIN',
+    'limitPrice': 0,
+    'stopPrice': 0,
+    'validity': 'DAY',
+    'disclosedQty': 0,
+    'offlineOrder': false,
+    'stopLoss': 0,
+    'takeProfit': 0,
+    'orderTag': 'tag1',
+  });
+
+
+  final response = await http.post(url, headers: headers, body: body);
+
+  if (response.statusCode == 200) {
+    final responseData = json.decode(response.body);
+    if (responseData['s'] == 'ok') {
+      final orderId = responseData['id'];
+      ElegantNotification.success(
+        title: Text(
+          'Success!',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        description: Text(
+          responseData['message'],
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        background: Color.fromARGB(243, 9, 9, 9),
+        borderRadius: BorderRadius.circular(10),
+      ).show(context);
+
+      // Fetch order data using the response ID
+      await fetchOrderData(context, appId, accessToken, orderId);
+    } else {
+      ElegantNotification.info(
+        title: Text(
+          'Info',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        description: Text(
+          '${responseData['message']}',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        background: Color.fromARGB(243, 9, 9, 9),
+        borderRadius: BorderRadius.circular(10),
+      ).show(context);
+    }
+  } else {
+    ElegantNotification.info(
+      title: Text(
+        'Info',
+        style: TextStyle(color: Colors.grey[300]),
+      ),
+      description: Text(
+        '${response.statusCode} ${response.body}',
+        style: TextStyle(color: Colors.grey[300]),
+      ),
+      background: Color.fromARGB(243, 9, 9, 9),
+      borderRadius: BorderRadius.circular(20),
+    ).show(context);
+    throw Exception('Failed to submit order');
+  }
+}
+
+Future<void> fetchOrderData(BuildContext context, String appId, String accessToken, String orderId) async {
+  final url = Uri.parse('https://api-t1.fyers.in/api/v3/orders?id=$orderId');
+  final headers = {
+    'Authorization': '$appId:$accessToken',
+    'Content-Type': 'application/json',
+  };
+
+  final response = await http.get(url, headers: headers);
+
+  if (response.statusCode == 200) {
+    final responseData = json.decode(response.body);
+    if (responseData['s'] == 'ok') {
+      final orderBook = responseData['orderBook'][0];
+      final double tradedPrice = orderBook['tradedPrice'];
+
+      // Retrieve default_stoploss from session
+      final prefs = await SharedPreferences.getInstance();
+      final String? tradingConfigurationsStr = prefs.getString('tradingConfigurations');
+      double defaultStoploss;
+
+      if (tradingConfigurationsStr != null) {
+        final Map<String, dynamic> tradingConfigurations = jsonDecode(tradingConfigurationsStr);
+        defaultStoploss = double.parse(tradingConfigurations['default_stoploss']);
+        print('default_stoploss: $defaultStoploss');
+      } else {
+        print('tradingConfigurations not found in preferences');
+        return; // Exit the function if tradingConfigurations is not found
+      }
+
+      // Calculate stoploss_price and stoploss_limit
+      final double stoplossPrice = (tradedPrice - (tradedPrice * defaultStoploss / 100)).roundToDouble();
+      final double stoplossLimit = (stoplossPrice - 0.05).roundToDouble();
+
+      // Place stop loss order
+      await placeStopLossOrder(context, appId, accessToken, orderBook['symbol'], orderBook['qty'], stoplossLimit, stoplossPrice);
+    } else {
+      ElegantNotification.info(
+        title: Text(
+          'Info',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        description: Text(
+          '${responseData['message']}',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        background: Color.fromARGB(243, 9, 9, 9),
+        borderRadius: BorderRadius.circular(10),
+      ).show(context);
+    }
+  } else {
+    ElegantNotification.info(
+      title: Text(
+        'Info',
+        style: TextStyle(color: Colors.grey[300]),
+      ),
+      description: Text(
+        '${response.statusCode} ${response.body}',
+        style: TextStyle(color: Colors.grey[300]),
+      ),
+      background: Color.fromARGB(243, 9, 9, 9),
+      borderRadius: BorderRadius.circular(20),
+    ).show(context);
+    throw Exception('Failed to fetch order data');
+  }
+}
+
+Future<void> placeStopLossOrder(BuildContext context, String appId, String accessToken, String symbol, int qty, double stoplossLimit, double stoplossPrice) async {
+  final url = Uri.parse('https://api-t1.fyers.in/api/v3/orders/sync');
+  final headers = {
+    'Authorization': '$appId:$accessToken',
+    'Content-Type': 'application/json',
+  };
+  final body = jsonEncode({
+    'symbol': symbol,
+    'qty': qty,
+    'type': 4,  // SL-L Order
+    'side': -1,  // Sell
+    'productType': 'MARGIN',
+    'limitPrice': stoplossLimit,
+    'stopPrice': stoplossPrice,
+    'validity': 'DAY',
+    'offlineOrder': false,
+  });
+
+  final response = await http.post(url, headers: headers, body: body);
+
+  if (response.statusCode == 200) {
+    final responseData = json.decode(response.body);
+    if (responseData['s'] == 'ok') {
+      // Store values in session
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('open_position_symbol', symbol);
+      await prefs.setDouble('open_buy_price', stoplossLimit); // Assuming traded_value is stoplossLimit
+      await prefs.setDouble('open_stoploss_price', stoplossPrice);
+
+      ElegantNotification.success(
+        title: Text(
+          'Stop Loss Order Placed!',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        description: Text(
+          responseData['message'],
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        background: Color.fromARGB(243, 9, 9, 9),
+        borderRadius: BorderRadius.circular(10),
+      ).show(context);
+    } else {
+      ElegantNotification.info(
+        title: Text(
+          'Info',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        description: Text(
+          '${responseData['message']}',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        background: Color.fromARGB(243, 9, 9, 9),
+        borderRadius: BorderRadius.circular(10),
+      ).show(context);
+    }
+  } else {
+    ElegantNotification.info(
+      title: Text(
+        'Info',
+        style: TextStyle(color: Colors.grey[300]),
+      ),
+      description: Text(
+        '${response.statusCode} ${response.body}',
+        style: TextStyle(color: Colors.grey[300]),
+      ),
+      background: Color.fromARGB(243, 9, 9, 9),
+      borderRadius: BorderRadius.circular(20),
+    ).show(context);
+    throw Exception('Failed to place stop loss order');
+  }
+}
+
+
+
 
 
 enum CardInfo {
