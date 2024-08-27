@@ -4,8 +4,11 @@ import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart'; // For debugging purposes
 import 'package:web_socket_channel/web_socket_channel.dart'; // For WebSocket communication
 import 'package:shared_preferences/shared_preferences.dart'; // For shared preferences
-import 'dart:convert';
 import 'package:flutter_spinkit/flutter_spinkit.dart'; // Import the spinkit package
+import 'package:elegant_notification/elegant_notification.dart'; // Ensure you have this package
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 
 class MidcapNiftyPage extends StatelessWidget {
   const MidcapNiftyPage({super.key});
@@ -73,18 +76,33 @@ class _OptionChainViewMidcapkniftyState extends State<OptionChainViewMidcapknift
         _endCurrentWebSocket();
       }
       _prefs.setString('webSocketUrl', _currentWsUrl);
+
       _initializeWebSocket();
     } else {
+      _endCurrentWebSocket();
       _initializeWebSocket();
     }
   }
 
-  void _endCurrentWebSocket() {
-    _channel?.sink.close();
-    _channel = null;
+
+  void _endCurrentWebSocket() async {
+    if (_channel != null) {
+      // Send a disconnect message to the WebSocket server
+      final disconnectMessage = json.encode({'action': 'disconnect'});
+      _channel?.sink.add(disconnectMessage);
+
+      // Optionally wait for a short period to ensure the server processes the disconnect message
+      await Future.delayed(Duration(seconds: 5));
+
+      // Close the WebSocket connection
+      _channel?.sink.close();
+      // _channel = null; // This is not necessary for a final field
+    }
   }
 
-  void _initializeWebSocket() {
+
+
+  void _initializeWebSocket()async{
     _channel = WebSocketChannel.connect(Uri.parse(_currentWsUrl));
     
     final Map<String, Map<String, dynamic>> ceSymbolsMap = {};
@@ -134,8 +152,8 @@ class _OptionChainViewMidcapkniftyState extends State<OptionChainViewMidcapknift
         allPESymbols.sort((a, b) => b['symbol'].compareTo(a['symbol']));
 
         setState(() {
-          _top5CESymbols = allCESymbols.take(5).toList();
-          _top5PESymbols = allPESymbols.take(5).toList();
+          _top5CESymbols = allCESymbols.take(6).toList();
+          _top5PESymbols = allPESymbols.take(6).toList();
           _indexSymbol = indexSymbolsMap;
           _isLoading = false;
         });
@@ -171,7 +189,7 @@ class _OptionChainViewMidcapkniftyState extends State<OptionChainViewMidcapknift
           ),
           Column(
             children: <Widget>[
-              const SizedBox(height: 125),
+              const SizedBox(height: 140),
               CarouselExample(
                 cardInfos: widget.cardInfos,
                 data: _indexSymbol,
@@ -332,7 +350,6 @@ class HeroLayoutCard extends StatelessWidget {
 }
 
 
-
 class SpacedItemsList extends StatelessWidget {
   final double listTileHeight;
   final double carouselWidth;
@@ -349,10 +366,18 @@ class SpacedItemsList extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
-        children: items.map((item) {
+        children: items.asMap().entries.map((entry) {
+          int index = entry.key;
+          Map<String, dynamic> item = entry.value;
+          
+          // Determine if this is the last item
+          bool isLastItem = index == items.length - 1;
+
           return Container(
             width: carouselWidth,
-            margin: const EdgeInsets.symmetric(vertical: 0.1),
+            margin: isLastItem
+                ? const EdgeInsets.symmetric(vertical: 20.0) // Extra space before the last item
+                : const EdgeInsets.symmetric(vertical: 0.1),
             child: ItemWidget(
               text: item['symbol'], // Use the symbol from the item
               ltp: item['ltp'],
@@ -364,6 +389,7 @@ class SpacedItemsList extends StatelessWidget {
     );
   }
 }
+
 
 class ItemWidget extends StatelessWidget {
   const ItemWidget({
@@ -394,7 +420,7 @@ class ItemWidget extends StatelessWidget {
       }
     }
 
-    final double buttonHeight = height * 0.82;
+    final double buttonHeight = height * 0.75;
     final double buttonWidth = 130;
 
     return Container(
@@ -487,9 +513,14 @@ class ItemWidget extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {
-                    _playTapSound();
-                    // Add Sell button action here
+                  onPressed: ()async {
+                        // _playTapSound();
+                        try {
+                          await deletePositions(context);
+                          print('Positions deleted successfully');
+                        } catch (e) {
+                          print('Error deleting positions: $e');
+                        }
                   },
                   child: const Text(
                     'Sell',
@@ -508,6 +539,118 @@ class ItemWidget extends StatelessWidget {
     );
   }
 }
+
+
+
+
+Future<void> deletePositions(BuildContext context) async {
+  await refreshAccessToken();
+  final prefs = await SharedPreferences.getInstance();
+  final appId = prefs.getString('client_id');
+  final accessToken = prefs.getString('access_token');
+
+  if (appId == null || accessToken == null) {
+    throw Exception('Missing app_id or access_token');
+  }
+
+  final url = Uri.parse('https://api-t1.fyers.in/api/v3/positions');
+  final headers = {
+    'Authorization': '$appId:$accessToken',
+    'Content-Type': 'application/json',
+  };
+  final body = jsonEncode({
+    'segment': [11],
+    'side': [1, -1],
+    'productType': ['INTRADAY', 'MARGIN'],
+  });
+
+  final response = await http.delete(url, headers: headers, body: body);
+
+  if (response.statusCode == 200) {
+    final responseData = json.decode(response.body);
+    if (responseData['s'] == 'ok') {
+      ElegantNotification.success(
+        title: Text(
+          'Success!',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        description: Text(
+          responseData['message'],
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        background: Color.fromARGB(243, 9, 9, 9),
+        borderRadius: BorderRadius.circular(10),
+      ).show(context);
+    } else {
+      ElegantNotification.error(
+        title: Text(
+          'Info',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        description: Text(
+          '${responseData['message']}',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        background: Color.fromARGB(243, 9, 9, 9),
+        borderRadius: BorderRadius.circular(10),
+      ).show(context);
+    }
+  } else {
+    ElegantNotification.error(
+      title: Text(
+        'Info',
+        style: TextStyle(color: Colors.grey[300]),
+      ),
+      description: Text(
+        '${response.statusCode} ${response.body}',
+        style: TextStyle(color: Colors.grey[300]),
+      ),
+      background: Color.fromARGB(243, 9, 9, 9),
+      borderRadius: BorderRadius.circular(20),
+    ).show(context);
+    throw Exception('Failed to delete positions');
+  }
+}
+
+Future<void> refreshAccessToken() async {
+  final prefs = await SharedPreferences.getInstance();
+  final appId = prefs.getString('client_id');
+  final secretKey = prefs.getString('secret_key');
+  final accessToken = prefs.getString('access_token');
+  final pin = '2255'; // Replace with the actual pin
+
+  if (appId == null || accessToken == null || secretKey == null) {
+    throw Exception('Missing app_id, access_token, or secret_key');
+  }
+
+  final appIdHash = sha256.convert(utf8.encode('$appId:$secretKey')).toString();
+
+  final url = Uri.parse('https://api-t1.fyers.in/api/v3/validate-refresh-token');
+  final response = await http.post(
+    url,
+    headers: {'Content-Type': 'application/json'},
+    body: json.encode({
+      'grant_type': 'refresh_token',
+      'appIdHash': appIdHash,
+      'refresh_token': accessToken,
+      'pin': pin,
+    }),
+  );
+
+  print('Response status: ${response.statusCode}');
+  print('Response body: ${response.body}');
+
+  if (response.statusCode == 200) {
+    final data = json.decode(response.body) as Map<String, dynamic>;
+    final newAccessToken = data['access_token'];
+    prefs.setString('access_token', newAccessToken);
+  } else {
+    print('Failed to refresh access token: ${response.statusCode} ${response.body}');
+    throw Exception('Failed to refresh access token');
+  }
+}
+
+
 
 enum CardInfo {
   dashBoard('Dashboard', 'Dashboard Overview status'),

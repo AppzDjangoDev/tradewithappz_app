@@ -172,7 +172,7 @@
 //           // Foreground content
 //           Column(
 //             children: <Widget>[
-//               const SizedBox(height: 125),
+//               const SizedBox(height: 140),
 //               CarouselExample(
 //                 cardInfos: widget.cardInfos,
 //                 data: _indexSymbol,
@@ -393,7 +393,7 @@
 //       }
 //     }
 
-//     final double buttonHeight = height * 0.82;
+//     final double buttonHeight = height * 0.75;
 //     final double buttonWidth = 130;
 
 //     return Container(

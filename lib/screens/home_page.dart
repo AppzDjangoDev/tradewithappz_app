@@ -247,7 +247,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           Positioned(
-            top: 60,
+            top: 80,
             left: 16,
             child: FloatingActionButton(
               onPressed: () {
@@ -259,7 +259,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           Positioned(
-            top: 60,
+            top: 80,
             right: 16,
             child: FloatingActionButton(
               onPressed: () {
@@ -273,7 +273,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           Positioned(
-            top: 60,
+            top: 80,
             left: 80,
             right: 80,
             child: Container(

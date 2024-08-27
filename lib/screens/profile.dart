@@ -122,7 +122,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 125),
+                      const SizedBox(height: 140),
                       Center(
                         child: Card(
                           color: Color.fromARGB(243, 9, 9, 9), // Background color of the card
@@ -199,7 +199,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           // Floating Action Buttons
           Positioned(
-            top: 60,
+            top: 80,
             left: 16,
             child: FloatingActionButton(
               onPressed: () {
@@ -211,7 +211,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           Positioned(
-            top: 60,
+            top: 80,
             right: 16,
             child: FloatingActionButton(
               onPressed: () {
@@ -225,7 +225,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           Positioned(
-            top: 60,
+            top: 80,
             left: 80,
             right: 80,
             child: Container(

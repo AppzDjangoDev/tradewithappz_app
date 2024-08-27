@@ -101,7 +101,7 @@ class WidgetHome extends StatelessWidget {
           _buildBackgroundImage(),
           Column(
             children: [
-              const SizedBox(height: 125),
+              const SizedBox(height: 140),
               _buildCarousel(carouselHeight, carouselItems),
               const SizedBox(height: 10),
               _buildGridView(cardHeight, cardWidth, cardColor, availableBalance, realizedProfitAndLoss, openingBalance, orderCount, tradeConfig),
@@ -509,3 +509,4 @@ Future<void> _launchUrl(String? url) async {
     throw Exception('Could not launch $url');
   }
 }
+
